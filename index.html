@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Name Generator</title>
+    <link rel="stylesheet" href="css/style.css" type="text/css">
+</head>
+
+<body>
+    <header class="hero">
+        <div class="center-content">
+            <h1>Name Generator</h1>
+            <h3>Generate names based on existing malware/vulnerability/threat-actor names using a <a
+                    href="http://en.wikipedia.org/wiki/Markov_chain">Markov chain</a></h3>
+            <p><a href="" id='result' class="copy-click" data-tooltip-text="Click to copy" data-tooltip-text-copied="✔ Copied to clipboard">a string you can copy</a></p>
+            <a href="#" id="generate" class="button">Generate new name</a>
+        </div>
+    </header>
+
+    <!-- JQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+    <!-- Load/Build Markov Chain and Generate name -->
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $("#generate").click(function () {
+                worker.postMessage({
+                    messageType: "generate",
+                    minLength: 5,
+                    maxLength: 10
+                });
+            });
+
+            var result = $("#result");
+            var progress = $(".bar");
+
+            var worker = new Worker("js/markov-builder.js");
+            worker.addEventListener("message", function (evt) {
+                if (evt.data.messageType === "loaded") {
+                    $("#loading").hide();
+                    $("#input").show();
+                } else if (evt.data.messageType === "generate") {
+                    result.html(evt.data.word);
+                }
+            }, false);
+            worker.postMessage({
+                messageType: "load"
+            });
+            worker.postMessage({
+                messageType: "generate",
+                minLength: 5,
+                maxLength: 10
+            });
+        });
+    </script>
+
+    <!-- Copy Button on Pre -->
+    <script>
+        const links = document.querySelectorAll('.copy-click');
+        const cls = {
+            copied: 'is-copied',
+            hover: 'is-hovered'
+        }
+
+        const copyToClipboard = str => {
+            const el = document.createElement('input');
+            str.dataset.copyString ? el.value = str.dataset.copyString : el.value = str.text;
+            el.setAttribute('readonly', '');
+            el.style.position = 'absolute';
+            el.style.opacity = 0;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+        }
+
+        const clickInteraction = (e) => {
+            e.preventDefault();
+            copyToClipboard(e.target);
+            e.target.classList.add(cls.copied);
+            setTimeout(() => e.target.classList.remove(cls.copied), 1000);
+            setTimeout(() => e.target.classList.remove(cls.hover), 700);
+        }
+
+        Array.from(links).forEach(link => {
+            link.addEventListener('click', e => clickInteraction(e));
+            link.addEventListener('keypress', e => {
+                if (e.keyCode === 13) clickInteraction(e);
+            });
+            link.addEventListener('mouseover', e => e.target.classList.add(cls.hover));
+            link.addEventListener('mouseleave', e => {
+                if (!e.target.classList.contains(cls.copied)) {
+                    e.target.classList.remove(cls.hover);
+                }
+            });
+        });
+    </script>
+
+</html>
